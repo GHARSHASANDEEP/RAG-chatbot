@@ -98,7 +98,7 @@ if file is not None:
     # ChatGroq - works on Streamlit Cloud, free API key from https://console.groq.com
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
     llm = ChatGroq(
-        model="mixtral-8x7b-32768",  # or llama3-8b-8192 / gemma2-9b-it
+        model="llama3-8b-8192",  # or gemma2-9b-it / llama-3.1-8b-instant
         temperature=0.3,
         api_key=GROQ_API_KEY
     )
