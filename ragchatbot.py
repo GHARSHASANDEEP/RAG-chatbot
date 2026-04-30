@@ -78,7 +78,7 @@ if file is not None:
 
     retriever = vector_store.as_retriever(
         search_type = "mmr",
-        search_kwargs = {"k":4}
+        search_kwargs = {"k":2}
     )
 
     #define the llm and prompts
@@ -98,8 +98,9 @@ if file is not None:
     # ChatGroq - works on Streamlit Cloud, free API key from https://console.groq.com
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
     llm = ChatGroq(
-        model="llama3-8b-8192",  # or gemma2-9b-it / llama-3.1-8b-instant
+        model="llama-3.1-8b-instant",
         temperature=0.3,
+        max_tokens=1024,
         api_key=GROQ_API_KEY
     )
 
