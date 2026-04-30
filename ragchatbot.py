@@ -9,9 +9,11 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import embeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.embeddings import HuggingFaceEmbeddings   # local only - works on local machine
 from langchain_community.vectorstores import FAISS
-from langchain_community.chat_models import ChatOllama
+# from langchain_community.chat_models import ChatOllama              # local only - requires Ollama running locally
+from langchain_groq import ChatGroq
+from langchain_huggingface import HuggingFaceEmbeddings
 
 st.header("My RAG Chatbot")
 
@@ -25,9 +27,13 @@ if file is not None:
     with pdfplumber.open(file) as pdf:
         text = ""
         for page in pdf.pages:
-            text += page.extract_text() + "\n"
+            page_text = page.extract_text()
+            if page_text:   # ✅ important check
+                text += page_text + "\n"
     #st.write(text)
-
+    if not text.strip():
+        st.error("No text extracted from PDF ❌")
+        st.stop()
     #split text into chunks
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", ". ", " ", ""],
@@ -35,6 +41,9 @@ if file is not None:
         chunk_overlap=200
     )
     chunks =text_splitter.split_text(text)
+    if len(chunks) == 0:
+        st.error("No chunks created from text ❌")
+        st.stop()
     #st.write(chunks)
 
     #generating embeddings
@@ -43,11 +52,22 @@ if file is not None:
     #     openai_api_key = OPENAI_API_KEY
     # )
 
+    # HuggingFaceEmbeddings - local only, works on local machine but not on Streamlit Cloud
+    # embeddings = HuggingFaceEmbeddings(
+    #     model_name="sentence-transformers/all-MiniLM-L6-v2"
+    # )
+
+    # Using HuggingFaceEmbeddings from langchain_huggingface - works on Streamlit Cloud
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
+
     #storing embeddings in vector db
-    vector_store = FAISS.from_texts(chunks, embeddings)
+    if chunks:
+        vector_store = FAISS.from_texts(chunks, embeddings)
+    else:
+        st.error("Cannot create vector store: empty chunks")
+        st.stop()
 
     #get user question
     user_question = st.text_input("Type your question here")
@@ -69,14 +89,23 @@ if file is not None:
     #     openai_api_key = OPENAI_API_KEY
     # )
 
-    llm = ChatOllama(
-        model="mistral",  # or llama3 / phi3
-        temperature=0.3
+    # ChatOllama - local only, requires Ollama running on your machine
+    # llm = ChatOllama(
+    #     model="mistral",  # or llama3 / phi3
+    #     temperature=0.3
+    # )
+
+    # ChatGroq - works on Streamlit Cloud, free API key from https://console.groq.com
+    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+    llm = ChatGroq(
+        model="mixtral-8x7b-32768",  # or llama3-8b-8192 / gemma2-9b-it
+        temperature=0.3,
+        api_key=GROQ_API_KEY
     )
 
-    st.write("Testing LLM...")
-    response = llm.invoke("Say hello in one sentence")
-    st.write(response.content)
+    # st.write("Testing LLM...")
+    # response = llm.invoke("Say hello in one sentence")
+    # st.write(response.content)
 
     #provide the prompts
     prompt = ChatPromptTemplate.from_messages([
